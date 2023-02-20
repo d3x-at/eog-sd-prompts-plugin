@@ -1,25 +1,21 @@
-import logging
 import os
-import re
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Optional
 from gi.repository import Eog, Gdk, GObject, Gtk
-from PIL import Image
 
+import parsers
 from constants import PACKAGE_NAME
+
 
 PLUGIN_DIR = Path(os.getenv("XDG_DATA_HOME", Path(os.getenv("HOME"), ".local/share")),
                   "eog/plugins", PACKAGE_NAME)
-
-re_param_code = r'\s*([\w ]+):\s*("(?:\\"[^,]|\\"|\\|[^\"])+"|[^,]*)(?:,|$)'
-re_param = re.compile(re_param_code)
 
 clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
 
 
 class SDPromptsPlugin(GObject.Object, Eog.WindowActivatable):
     window = GObject.property(type=Eog.Window)
-    parameters: Optional[str] = None
+    parameters: Optional[parsers.PromptData] = None
 
     def __init__(self):
         self.ui = Gtk.Builder()
@@ -57,30 +53,16 @@ class SDPromptsPlugin(GObject.Object, Eog.WindowActivatable):
     def notify_image_cb(self, *_) -> None:
         '''handle image notifications'''
         image = self.window.get_image()
-        if image is None:
-            return
-
-        parameters = None
-        image_file = image.get_file()
-        image_info = image_file.query_info('standard::content-type', 0, None)
-        mime_type = image_info.get_content_type()
-
-        if mime_type == "image/png":
-            image_path = image_file.get_path()
-            try:
-                with Image.open(image_path) as image:
-                    parameters = image.info['parameters'] if 'parameters' in image.info else None
-            except:
-                logging.exception(f'error while opening {image_path}')
-
-        self.set_parameters(parameters)
+        if image is not None:
+            self.set_parameters(image)
 
     def copy_prompt(self, _) -> None:
         '''copy prompt to clipboard'''
         if self.parameters is not None:
-            clipboard.set_text(self.parameters, -1)
+            clipboard.set_text(self.parameters.complete_prompt, -1)
 
-    def set_parameters(self, parameters: Optional[str]):
+    def set_parameters(self, image):
+        parameters = parsers.get_parameters(image)
         self.parameters = parameters
 
         if parameters is None:
@@ -94,15 +76,13 @@ class SDPromptsPlugin(GObject.Object, Eog.WindowActivatable):
             self.info_label.set_visible(False)
             self.prompts_container.set_visible(True)
 
-        prompt, negative_prompt, processing_info = parse_parameters(parameters)
-
         # positive prompt
         prompt_label = self.ui.get_object("prompt")
-        prompt_label.set_label(prompt)
+        prompt_label.set_label(parameters.prompt)
 
         # negative prompt
         negative_prompt_label = self.ui.get_object("negative-prompt")
-        negative_prompt_label.set_label(negative_prompt)
+        negative_prompt_label.set_label(parameters.negative_prompt)
 
         parameters_box = self.ui.get_object("parameters-box")
         # clean up additional parameters
@@ -110,7 +90,7 @@ class SDPromptsPlugin(GObject.Object, Eog.WindowActivatable):
             parameters_box.remove(child)
 
         # fill parameters box with new items
-        for key, value in processing_info:
+        for key, value in parameters.processing_info:
             hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=3)
             parameters_box.add(hbox)
             hbox.add(Gtk.Label(
@@ -118,33 +98,3 @@ class SDPromptsPlugin(GObject.Object, Eog.WindowActivatable):
             hbox.add(Gtk.Label(value, xalign=0, selectable=True))
 
         parameters_box.show_all()
-
-
-def parse_parameters(parameters: str) -> Tuple[str, str, List[Tuple[str, str]]]:
-    lines, processing_info = parse_processing_info(parameters.split("\n"))
-    prompt, negative_prompt = [], []
-    i = 0
-
-    # prompt
-    for line in lines:
-        line = line.strip()
-        if line.startswith("Negative prompt:"):
-            line = line[16:]
-            break
-        prompt.append(line)
-        i += 1
-
-    # negative prompt
-    for line in lines[i:]:
-        negative_prompt.append(line.strip())
-
-    return "\n".join(prompt), "\n".join(negative_prompt), processing_info
-
-
-def parse_processing_info(lines: List[str]) -> Tuple[List[str], List[Tuple[str, str]]]:
-    '''attempt to read processing info tags from the parametes lines'''
-    parts = re_param.findall(lines[-1].strip())
-    if len(parts) < 3:
-        return lines, []
-
-    return lines[:-1], [(k, v.strip("\"")) for k, v in parts]
