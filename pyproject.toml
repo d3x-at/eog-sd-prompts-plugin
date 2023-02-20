@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=45", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "eog-sd-prompts-plugin"
+description = "eog stable diffusion prompt display"
+dynamic = ["version"]
+license = {file = "LICENSE.txt"}
+authors = [
+   {name = "d3x-at", email = "os@d3x.at"}
+]
+dependencies = [
+   'Pillow>=8.3.1',
+]
+
+[tool.setuptools_scm]
+
+[project.urls]
+repository = "https://github.com/d3x-at/eog-sd-prompts-plugin"

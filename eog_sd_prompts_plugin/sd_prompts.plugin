@@ -1,0 +1,8 @@
+[Plugin]
+Module=sd_prompts
+Loader=python3
+Name=SD Prompts
+Description=Display Stable Diffusion prompts in the sidebar
+Authors=d3x-at <os@d3x.at>
+Copyright=Copyright (C) 2023 d3x-at
+Website=https://github.com/d3x-at/eog-sd-prompts-plugin
