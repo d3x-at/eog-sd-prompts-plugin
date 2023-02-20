@@ -1,4 +1,5 @@
 '''logic for getting prompts data out of different image formats'''
+import json
 import logging
 import re
 from abc import ABC, abstractmethod
@@ -36,7 +37,7 @@ def get_parameters(eog_image) -> Optional[PromptData]:
 
 def try_parsers(image: Image.Image):
     '''loop through available parsers to get image information'''
-    for parser in [AUTOMATIC1111Parser]:
+    for parser in [AUTOMATIC1111Parser, InvokeAIParser]:
         parameters = parser(image).parse()
         if parameters:
             return parameters
@@ -91,3 +92,31 @@ class AUTOMATIC1111Parser(Parser):
             return lines, []
 
         return lines[:-1], [(k, v.strip("\"")) for k, v in parts]
+
+
+class InvokeAIParser(Parser):
+    re_prompt = re.compile(r'^(.*?)(?:\[([^\[]*)\])?$')
+
+    def parse(self):
+        if 'sd-metadata' not in self.image.info:
+            return None
+
+        metadata = json.loads(self.image.info['sd-metadata'])
+        prompts = metadata['image']['prompt']
+
+        # prompts
+        prompt, negative_prompt = [], []
+        for item in prompts:
+            match = self.re_prompt.fullmatch(item['prompt'])
+            if match:
+                if match[1] != "":
+                    prompt.append(f"{item['weight']}: {match[1].strip()}")
+                if match[2] != "":
+                    negative_prompt.append(f"{item['weight']}: {match[2]}")
+
+        # processing-infos
+        processing_info = [(k, v)
+                           for k, v in metadata['image'].items() if k != "prompt"]
+
+        return PromptData("\n".join(prompt), "\n".join(negative_prompt),
+                          processing_info, "")
