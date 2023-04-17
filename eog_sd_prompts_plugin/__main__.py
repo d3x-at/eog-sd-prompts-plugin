@@ -3,14 +3,14 @@ import sys
 from pathlib import Path
 import pkg_resources
 
-from .constants import PACKAGE_NAME
+PACKAGE_NAME = "eog_sd_prompts_plugin"
 
 if __name__ == "__main__":
     if len(sys.argv) != 2 or sys.argv[1] != "install":
         print('execute "python -m eog_sd_prompts_plugin install" to add a link to the user\'s eog plugin directory')
         sys.exit(1)
 
-    plugins_dir = Path(os.getenv("XDG_DATA_HOME", Path(os.getenv("HOME"), ".local/share")),
+    plugins_dir = Path(os.getenv("XDG_DATA_HOME", os.path.join(os.getenv("HOME"), ".local/share")),
                        "eog/plugins")
 
     package_path = os.path.join(
@@ -19,7 +19,7 @@ if __name__ == "__main__":
     symlink_path = plugins_dir / PACKAGE_NAME
 
     if not plugins_dir.exists():
-        plugins_dir.mkdir(parents=True, exist_ok=True)
+        plugins_dir.mkdir(parents=True)
         print(f'created EOG plugin directory: {plugins_dir}')
 
     os.symlink(package_path, symlink_path)

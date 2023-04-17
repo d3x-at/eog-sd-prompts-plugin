@@ -5,14 +5,13 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "eog-sd-prompts-plugin"
 description = "eog stable diffusion prompt display"
+readme = "README.md"
+requires-python = ">=3.7"
+dependencies = [
+   'sd-parsers'
+]
 dynamic = ["version"]
 license = {file = "LICENSE.txt"}
-authors = [
-   {name = "d3x-at", email = "os@d3x.at"}
-]
-dependencies = [
-   'Pillow>=8.3.1',
-]
 
 [tool.setuptools_scm]
 

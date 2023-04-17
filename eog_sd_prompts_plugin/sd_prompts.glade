@@ -8,8 +8,12 @@
     <property name="orientation">vertical</property>
     <child>
       <object class="GtkLabel" id="info-label">
+        <property name="visible">True</property>
         <property name="sensitive">False</property>
         <property name="can-focus">False</property>
+        <property name="margin-start">5</property>
+        <property name="margin-top">5</property>
+        <property name="xalign">0</property>
       </object>
       <packing>
         <property name="expand">False</property>
@@ -23,6 +27,9 @@
         <property name="can-focus">False</property>
         <property name="orientation">vertical</property>
         <property name="spacing">3</property>
+        <child>
+          <placeholder/>
+        </child>
         <child>
           <object class="GtkLabel">
             <property name="visible">True</property>
@@ -116,16 +123,31 @@
           </packing>
         </child>
         <child>
+          <placeholder/>
+        </child>
+        <child>
+          <object class="GtkLabel">
+            <property name="visible">True</property>
+            <property name="sensitive">False</property>
+            <property name="can-focus">False</property>
+            <property name="margin-start">5</property>
+            <property name="margin-top">5</property>
+            <property name="label" translatable="yes">Other Metadata:</property>
+            <property name="xalign">0</property>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">6</property>
+          </packing>
+        </child>
+        <child>
           <object class="GtkScrolledWindow">
             <property name="visible">True</property>
             <property name="can-focus">True</property>
             <property name="margin-start">5</property>
             <property name="margin-end">5</property>
             <property name="margin-top">5</property>
-            <property name="vscrollbar-policy">never</property>
-            <property name="min-content-height">10</property>
-            <property name="max-content-height">200</property>
-            <property name="propagate-natural-height">True</property>
             <child>
               <object class="GtkViewport">
                 <property name="visible">True</property>
@@ -142,9 +164,9 @@
             </child>
           </object>
           <packing>
-            <property name="expand">False</property>
+            <property name="expand">True</property>
             <property name="fill">True</property>
-            <property name="position">5</property>
+            <property name="position">7</property>
           </packing>
         </child>
         <child>
@@ -161,7 +183,7 @@
           <packing>
             <property name="expand">False</property>
             <property name="fill">True</property>
-            <property name="position">6</property>
+            <property name="position">8</property>
           </packing>
         </child>
       </object>
