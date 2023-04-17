@@ -9,7 +9,6 @@ This plugin requires PyGObject and the [SD-Parsers](https://github.com/d3x-at/sd
 PyGObject should be available as system package on most distributions (e.g.: `python3-gobject` on Fedora Linux).
 
 ## Installation
-### Legacy
 
 Using pip (git needs to be installed), the installation can be done like this:
 
