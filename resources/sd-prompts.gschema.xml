@@ -1,0 +1,9 @@
+<schemalist>
+  <schema id="org.gnome.eog.plugins.sd-prompts" path="/org/gnome/eog/plugins/sd-prompts/" gettext-domain="@GETTEXT_PACKAGE@">
+    <key name="set-page" type="b">
+      <default>true</default>
+      <summary>Display the SD Prompt page by default</summary>
+      <description>Should the sidebar default to the SD Prompt page, if displayed.</description>
+    </key>
+  </schema>
+</schemalist>

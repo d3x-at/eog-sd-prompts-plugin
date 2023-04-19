@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional
 
 import sdparsers
-from gi.repository import Eog, Gdk, GObject, Gtk
+from gi.repository import Eog, Gdk, GObject, Gtk, Gio, PeasGtk
 
 PACKAGE_NAME = "eog_sd_prompts_plugin"
 PLUGIN_ID = "org.gnome.eog.plugins.sd-prompts"
@@ -21,11 +21,14 @@ CLIPBOARD_PARAMS = {
 }
 
 
-class SDPromptsPlugin(GObject.Object, Eog.WindowActivatable):
+class SDPromptsPlugin(GObject.Object, Eog.WindowActivatable, PeasGtk.Configurable):
     window = GObject.property(type=Eog.Window)
     parameters: Optional[sdparsers.PromptInfo] = None
+    settings_widget = None
 
     def __init__(self):
+        self.settings = self._get_settings()
+
         self.ui = Gtk.Builder()
         self.ui.add_from_file(str(PLUGIN_DIR / "sd_prompts.glade"))
 
@@ -49,7 +52,8 @@ class SDPromptsPlugin(GObject.Object, Eog.WindowActivatable):
         self.window.get_sidebar().add_page("SD Prompt", self.sidebar)
 
         # try to display our new sidebar
-        self.window.get_sidebar().set_page(self.sidebar)
+        if self.settings and self.settings.get_boolean("set-page"):
+            self.window.get_sidebar().set_page(self.sidebar)
 
     def do_deactivate(self) -> None:
         if self.sidebar:
@@ -57,6 +61,31 @@ class SDPromptsPlugin(GObject.Object, Eog.WindowActivatable):
             self.window.get_view().disconnect(self.image_loaded_id)
             # remove our sidebar
             self.window.get_sidebar().remove_page(self.sidebar)
+
+    def do_create_configure_widget(self):
+        if self.settings is None:
+            return None
+
+        if self.settings_widget is None:
+            self.settings_widget = self.ui.get_object("sd-prompts-config-box")
+            set_page_checkbox = self.ui.get_object("set-page-checkbox")
+            set_page_checkbox.connect("toggled", self._set_page_toggle_cb)
+            set_page = self.settings.get_boolean("set-page")
+            set_page_checkbox.set_active(set_page)
+        return self.settings_widget
+
+    def _set_page_toggle_cb(self, checkbox) -> None:
+        self.settings.set_boolean("set-page", checkbox.get_active())
+
+    def _get_settings(self):
+        try:
+            schema_source = Gio.SettingsSchemaSource.new_from_directory(
+                str(PLUGIN_DIR), None, False)
+            schema = schema_source.lookup(PLUGIN_ID, False)
+            return Gio.Settings.new_full(schema, None, None)
+        except Exception:
+            logging.exception("could not load configuration")
+        return None
 
     def _notify_image_cb(self, *_) -> None:
         '''handle image notifications'''
