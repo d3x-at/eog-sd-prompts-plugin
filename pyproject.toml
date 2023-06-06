@@ -8,7 +8,7 @@ description = "eog stable diffusion prompt display"
 readme = "README.md"
 requires-python = ">=3.7"
 dependencies = [
-   'sd-parsers'
+   'sd-parsers >= 0.2.3'
 ]
 dynamic = ["version"]
 license = {file = "LICENSE.txt"}

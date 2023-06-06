@@ -1,10 +1,12 @@
 import logging
 import os
+from io import BytesIO
 from pathlib import Path
 from typing import Optional
 
 import sdparsers
-from gi.repository import Eog, Gdk, GObject, Gtk, Gio, PeasGtk
+
+from gi.repository import Eog, Gdk, Gio, GObject, Gtk, PeasGtk
 
 PACKAGE_NAME = "eog_sd_prompts_plugin"
 PLUGIN_ID = "org.gnome.eog.plugins.sd-prompts"
@@ -16,7 +18,6 @@ parser = sdparsers.ParserManager()
 
 CLIPBOARD_PARAMS = {
     sdparsers.AUTOMATIC1111Parser.GENERATOR_ID: "parameters",
-    sdparsers.AUTOMATICStealthParser.GENERATOR_ID: "parameters",
     sdparsers.InvokeAIParser.GENERATOR_ID: "sd-metadata"
 }
 
@@ -87,12 +88,6 @@ class SDPromptsPlugin(GObject.Object, Eog.WindowActivatable, PeasGtk.Configurabl
             logging.exception("could not load configuration")
         return None
 
-    def _notify_image_cb(self, *_) -> None:
-        '''handle image notifications'''
-        image = self.window.get_image()
-        if image:
-            self._set_parameters(image)
-
     def _copy_prompt_cb(self, _) -> None:
         '''copy prompt information to clipboard (if available)'''
         if not self.parameters:
@@ -102,9 +97,25 @@ class SDPromptsPlugin(GObject.Object, Eog.WindowActivatable, PeasGtk.Configurabl
             clipboard.set_text(
                 self.parameters.raw_params[param_key], -1)
 
-    def _set_parameters(self, image) -> None:
+    def _notify_image_cb(self, *_) -> None:
+        '''handle image notifications'''
+        image = self.window.get_image()
+        if image:
+            image_file = image.get_file()
+            image_file.load_bytes_async(None, self._load_bytes_complete)
+
+    def _load_bytes_complete(self, file, result):
+        bytes = file.load_bytes_finish(result)
+        try:
+            with BytesIO(bytes[0].get_data()) as image_io:
+                parameters = parser.parse(image_io)
+            self._set_parameters(parameters)
+        except Exception:  # pylint: disable=broad-except
+            logging.exception('error while reading image')
+
+    def _set_parameters(self, parameters) -> None:
         '''query the image for SD parameters and fill fields'''
-        self.parameters = get_parameters(image)
+        self.parameters = parameters
 
         if not self.parameters:
             self.info_label.set_label("No SD metadata found.")
@@ -145,7 +156,7 @@ class SDPromptsPlugin(GObject.Object, Eog.WindowActivatable, PeasGtk.Configurabl
 
         # samplers
         samplers = {sampler.name for sampler in self.parameters.samplers}
-        parameters_box.add(key_value_box(f"Samplers", ", ".join(samplers)))
+        parameters_box.add(key_value_box("Samplers", ", ".join(samplers)))
 
         # sampler parameters (only for single-sampler images)
         if len(self.parameters.samplers) == 1:
@@ -160,20 +171,6 @@ class SDPromptsPlugin(GObject.Object, Eog.WindowActivatable, PeasGtk.Configurabl
             parameters_box.add(key_value_box(key, value))
 
         parameters_box.show_all()
-
-
-def get_parameters(eog_image) -> Optional[sdparsers.PromptInfo]:
-    '''try to get sd prompts from the given image'''
-    image_file = eog_image.get_file()
-    image_info = image_file.query_info('standard::content-type', 0, None)
-    mime_type = image_info.get_content_type()
-    if mime_type in ("image/png", "image/jpeg", "image/webp"):
-        image_path = image_file.get_path()
-        try:
-            return parser.parse(image_path)
-        except Exception:  # pylint: disable=broad-except
-            logging.exception('error while reading %s', image_path)
-    return None
 
 
 def key_value_box(key: str, value: Optional[str] = None):
